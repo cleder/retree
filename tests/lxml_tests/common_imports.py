@@ -53,10 +53,19 @@ def filter_by_version(test_class_or_callable=None, required_versions=None, versi
 IS_PYPY: bool = hasattr(sys, "pypy_version_info")
 
 # Canonicalize helper – use our etree's canonicalize if present, else stdlib.
+# Always returns bytes (lxml's canonicalize returns bytes; stdlib returns str).
 try:
-    canonicalize = etree.canonicalize  # type: ignore[attr-defined]
+    _raw_canonicalize = etree.canonicalize  # type: ignore[attr-defined]
 except AttributeError:  # pragma: no cover
-    from xml.etree.ElementTree import canonicalize  # type: ignore[assignment]
+    from xml.etree.ElementTree import canonicalize as _raw_canonicalize  # type: ignore[assignment]
+
+
+def canonicalize(data, **kw):
+    """Canonicalize XML and return bytes (compatible with lxml's canonicalize)."""
+    result = _raw_canonicalize(data, **kw)
+    if isinstance(result, str):
+        return result.encode('utf-8')
+    return result
 
 
 def _str(s: str) -> str:  # noqa: D401

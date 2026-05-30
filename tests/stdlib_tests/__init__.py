@@ -63,3 +63,20 @@ if sys.version_info < (3, 13):
 
     if not hasattr(_support, "skip_if_unlimited_stack_size"):
         _support.skip_if_unlimited_stack_size = lambda f: f  # type: ignore[attr-defined]
+
+    # ------------------------------------------------------------------
+    # unittest.TestCase.assertHasAttr / assertNotHasAttr – Python 3.13+
+    # ------------------------------------------------------------------
+    if not hasattr(unittest.TestCase, "assertHasAttr"):
+        def _assertHasAttr(self, obj, name, msg=None):  # noqa: N802
+            if not hasattr(obj, name):
+                std_msg = f"{obj!r} does not have attribute {name!r}"
+                self.fail(self._formatMessage(msg, std_msg))
+
+        def _assertNotHasAttr(self, obj, name, msg=None):  # noqa: N802
+            if hasattr(obj, name):
+                std_msg = f"{obj!r} unexpectedly has attribute {name!r}"
+                self.fail(self._formatMessage(msg, std_msg))
+
+        unittest.TestCase.assertHasAttr = _assertHasAttr  # type: ignore[attr-defined]
+        unittest.TestCase.assertNotHasAttr = _assertNotHasAttr  # type: ignore[attr-defined]
