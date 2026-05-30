@@ -1,0 +1,14 @@
+[package]
+name = "retree"
+version = "0.1.0"
+edition = "2021"
+description = "Rust-backed etree core"
+license = "MIT"
+
+[lib]
+name = "_rust_etree"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.28.3", features = ["extension-module"] }
+xmloxide = "0.4.3"
