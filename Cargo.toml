@@ -11,4 +11,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 pyo3 = { version = "0.28.3", features = ["extension-module"] }
-xmloxide = "0.4.3"
+quick-xml = { version = "0.37", features = ["encoding"] }

@@ -29,6 +29,15 @@ from .common_imports import SillyFileLike, LargeFileLikeUnicode, doctest, make_d
 from .common_imports import canonicalize, _str, _bytes
 from .common_imports import SimpleFSPath
 
+# Skip this entire module if the lxml-specific attributes are absent
+# (i.e. we are running against retree/stdlib rather than real lxml).
+_missing = [a for a in ("LXML_VERSION", "LIBXML_VERSION", "LIBXML_FEATURES")
+            if not hasattr(etree, a)]
+if _missing:
+    import unittest as _unittest
+    raise _unittest.SkipTest(
+        "test_etree requires lxml-specific attributes: " + ", ".join(_missing))
+
 print(f"""
 TESTED VERSION: {etree.__version__}
     Python:           {tuple(sys.version_info)!r}
