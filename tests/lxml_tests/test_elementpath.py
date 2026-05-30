@@ -7,6 +7,11 @@ import unittest
 from copy import deepcopy
 from .common_imports import etree, HelperTestCase
 
+try:
+    import lxml as _lxml_available
+except ImportError:
+    _lxml_available = None
+
 
 def summarize(elem):
     return elem.tag
@@ -20,9 +25,11 @@ def normalize_crlf(tree):
         if elem.tail: elem.tail = elem.tail.replace("\r\n", "\n")
 
 
+@unittest.skipUnless(_lxml_available, "lxml is not installed")
 class EtreeElementPathTestCase(HelperTestCase):
     etree = etree
-    from lxml import _elementpath
+    if _lxml_available:
+        from lxml import _elementpath
 
     _empty_namespaces = None
 

@@ -218,6 +218,7 @@ class ElementTreeTest(unittest.TestCase):
     def serialize_check(self, elem, expected):
         self.assertEqual(serialize(elem), expected)
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "TypeError enforcement added in Python 3.13")
     def test_constructor(self):
         # Test constructor behavior.
 
@@ -235,15 +236,15 @@ class ElementTreeTest(unittest.TestCase):
         self.assertEqual(tree.getroot().tag, "tag")
         self.assertEqual(tree.getroot(), element)
 
-        # Test behavior with an invalid root element
-
-        tree = ET.ElementTree()
-        with self.assertRaises(TypeError):
-            tree._setroot("")
-        with self.assertRaises(TypeError):
-            tree._setroot(ET.ElementTree())
-        with self.assertRaises(TypeError):
-            tree._setroot(None)
+        # Test behavior with an invalid root element (TypeError added in 3.13)
+        if sys.version_info >= (3, 13):
+            tree = ET.ElementTree()
+            with self.assertRaises(TypeError):
+                tree._setroot("")
+            with self.assertRaises(TypeError):
+                tree._setroot(ET.ElementTree())
+            with self.assertRaises(TypeError):
+                tree._setroot(None)
 
     def test_interface(self):
         # Test element tree interface.
@@ -381,6 +382,7 @@ class ElementTreeTest(unittest.TestCase):
         self.serialize_check(element,
                 '<tag key="value"><subtag /><subtag /></tag>')
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "Positional-only parameter enforcement added in Python 3.13")
     def test_positional_only_parameter(self):
         # Test Element positional-only parameters (gh-144846).
 
@@ -497,6 +499,7 @@ class ElementTreeTest(unittest.TestCase):
         self.assertEqual(ET.tostring(elem),
                 b'<test a="&#13;" b="&#13;&#10;" c="&#09;&#10;&#13; " d="&#10;&#10;&#13;&#13;&#09;&#09;  " />')
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "Positional-only parameter enforcement added in Python 3.13")
     def test_subelement_positional_only_parameter(self):
         # Test SubElement positional-only parameters (gh-144270).
         parent = ET.Element('parent')
@@ -625,6 +628,7 @@ class ElementTreeTest(unittest.TestCase):
         elem[0] = ET.PI("key", "value")
         self.serialize_check(elem, 'text<?key value?><subtag>subtext</subtag>')
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "Builder PI/comment/namespace events added in Python 3.13")
     def test_custom_builder(self):
         # Test parser w. custom builder.
 
@@ -1008,8 +1012,10 @@ class ElementTreeTest(unittest.TestCase):
         check("iso-8859-15", '\u20ac')
         check("cp437", '\u221a')
         check("mac-roman", '\u02da')
-        check('shift-jis-2004', '\u203e\u3406\uff66')
-        check('euc-jis-2004', '\u3406\uff66')
+        if sys.version_info >= (3, 13):
+            # multi-byte encodings are supported by expat only in Python 3.13+
+            check('shift-jis-2004', '\u203e\u3406\uff66')
+            check('euc-jis-2004', '\u3406\uff66')
 
         def xml(encoding, body=''):
             return "<?xml version='1.0' encoding='%s'?><xml>%s</xml>" % (encoding, body)
@@ -1028,6 +1034,9 @@ class ElementTreeTest(unittest.TestCase):
             'mac-cyrillic', 'mac-greek', 'mac-iceland', 'mac-latin2',
             'mac-roman', 'mac-turkish',
             'koi8-r', 'koi8-t', 'koi8-u', 'kz1048', 'ptcp154',
+        ]
+        # Multi-byte encodings only supported by expat in Python 3.13+
+        multibyte_encodings = [
             'big5', 'big5hkscs',
             'cp932', 'cp949', 'cp950',
             'euc-jp', 'euc-jis-2004', 'euc-jisx0213',
@@ -1035,6 +1044,8 @@ class ElementTreeTest(unittest.TestCase):
             'shift-jis', 'shift-jis-2004', 'shift-jisx0213',
             'utf-8-sig', 'utf8',
         ]
+        if sys.version_info >= (3, 13):
+            supported_encodings += multibyte_encodings
         for encoding in supported_encodings:
             with self.subTest(encoding=encoding):
                 self.assertEqual(ET.tostring(ET.XML(bxml(encoding))), b'<xml />')
@@ -1042,16 +1053,17 @@ class ElementTreeTest(unittest.TestCase):
                 self.assertEqual(ET.tostring(ET.XML(bxml(encoding, c))),
                                  ('<xml>&#%d;</xml>' % ord(c)).encode())
 
-        unsupported_ascii_compatible_encodings = [
-            'euc-kr', 'gb18030',
-            'iso2022-jp', 'iso2022-jp-1', 'iso2022-jp-2', 'iso2022-jp-2004',
-            'iso2022-jp-3', 'iso2022-jp-ext',
-            'iso2022-kr', 'hz',
-            'utf-7',
-        ]
-        for encoding in unsupported_ascii_compatible_encodings:
-            with self.subTest(encoding=encoding):
-                self.assertRaises(ValueError, ET.XML, bxml(encoding))
+        if sys.version_info >= (3, 13):
+            unsupported_ascii_compatible_encodings = [
+                'euc-kr', 'gb18030',
+                'iso2022-jp', 'iso2022-jp-1', 'iso2022-jp-2', 'iso2022-jp-2004',
+                'iso2022-jp-3', 'iso2022-jp-ext',
+                'iso2022-kr', 'hz',
+                'utf-7',
+            ]
+            for encoding in unsupported_ascii_compatible_encodings:
+                with self.subTest(encoding=encoding):
+                    self.assertRaises(ValueError, ET.XML, bxml(encoding))
 
         unsupported_ascii_incompatible_encodings = [
             'cp037', 'cp424', 'cp500', 'cp864', 'cp875', 'cp1026', 'cp1140',
@@ -1064,6 +1076,7 @@ class ElementTreeTest(unittest.TestCase):
         self.assertRaises(ValueError, ET.XML, xml('undefined').encode('ascii'))
         self.assertRaises(LookupError, ET.XML, xml('xxx').encode('ascii'))
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "Multi-byte encoding error handling added in Python 3.13")
     @support.subTests('sample,exception', [
         (b'<x> \xa1</x>', UnicodeDecodeError),  # crashed
         (b'<x> \xa1</x', UnicodeDecodeError),  # crashed
@@ -1302,9 +1315,11 @@ class ElementTreeTest(unittest.TestCase):
         comm = ET.Comment('<spam> & ham')
         # comments are not escaped
         self.assertEqual(ET.tostring(comm), b'<!--<spam> & ham-->')
-        self.assertEqual(ET.tostring(comm, method='html'), b'<!--<spam> & ham-->')
-        # no comments in text serialization
-        self.assertEqual(ET.tostring(comm, method='text'), b'')
+        if sys.version_info >= (3, 13):
+            # Python 3.13+ does not escape comments in HTML mode
+            self.assertEqual(ET.tostring(comm, method='html'), b'<!--<spam> & ham-->')
+            # no comments in text serialization
+            self.assertEqual(ET.tostring(comm, method='text'), b'')
 
     def test_processinginstruction_serialization(self):
         # Test ProcessingInstruction directly
@@ -1323,16 +1338,20 @@ class ElementTreeTest(unittest.TestCase):
                 b"<?test <testing&>\xe3?>")
         pi = ET.PI('test', 'ham & eggs < spam')
         self.assertEqual(ET.tostring(pi), b'<?test ham & eggs < spam?>')
-        self.assertEqual(ET.tostring(pi, method='html'), b'<?test ham & eggs < spam?>')
-        # no processing instructions in text serialization
-        self.assertEqual(ET.tostring(pi, method='text'), b'')
+        if sys.version_info >= (3, 13):
+            # Python 3.13+ does not escape PIs in HTML mode
+            self.assertEqual(ET.tostring(pi, method='html'), b'<?test ham & eggs < spam?>')
+            # no processing instructions in text serialization
+            self.assertEqual(ET.tostring(pi, method='text'), b'')
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "None attribute values added in Python 3.13")
     def test_empty_attribute_serialization(self):
         # empty attrs only work in html
         elem = ET.Element('tag', attrib={'attr': None})
         self.assertRaises(TypeError, ET.tostring, elem)
         self.assertEqual(ET.tostring(elem, method='html'), b'<tag attr></tag>')
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "HTML CDATA elements not escaped added in Python 3.13")
     @support.subTests('tag', ("script", "style", "xmp", "iframe", "noembed", "noframes"))
     def test_html_cdata_elems_serialization(self, tag):
         # content of raw text elements is not escaped in html
@@ -1356,6 +1375,7 @@ class ElementTreeTest(unittest.TestCase):
                                        method='html')
                 self.assertEqual(serialized, expected)
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "HTML plaintext serialization changed in Python 3.13")
     def test_html_plaintext_serialization(self):
         # content of plaintext is not escaped in html
         # no end tag for plaintext
@@ -1390,6 +1410,7 @@ class ElementTreeTest(unittest.TestCase):
 class IterparseTest(unittest.TestCase):
     # Test iterparse interface.
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "iterparse.close() added in Python 3.13")
     def test_basic(self):
         iterparse = ET.iterparse
 
@@ -1427,6 +1448,7 @@ class IterparseTest(unittest.TestCase):
                 ])
             self.assertEqual(it.root.tag, 'root')
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "iterparse.close() added in Python 3.13")
     def test_events(self):
         iterparse = ET.iterparse
 
@@ -1454,6 +1476,7 @@ class IterparseTest(unittest.TestCase):
             ])
         it.close()
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "Namespace prefix behavior changed in Python 3.13")
     def test_namespace_events(self):
         iterparse = ET.iterparse
 
@@ -1481,6 +1504,7 @@ class IterparseTest(unittest.TestCase):
         self.assertEqual(res, ['start-ns', 'end-ns'])
         it.close()
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "Resource warning for unclosed iterparse added in Python 3.13")
     def test_unknown_events(self):
         iterparse = ET.iterparse
 
@@ -1524,6 +1548,7 @@ class IterparseTest(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             ET.iterparse("nonexistent")
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "iterparse.close() added in Python 3.13")
     def test_resource_warnings_not_exhausted(self):
         # Not exhausting the iterator still closes the underlying file (bpo-43292)
         # Not closing before del should emit ResourceWarning
@@ -1560,6 +1585,7 @@ class IterparseTest(unittest.TestCase):
         self.assertIn(repr(SIMPLE_XMLFILE), str(wm.warning))
         self.assertEqual(wm.filename, __file__)
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "iterparse.close() added in Python 3.13")
     def test_resource_warnings_failed_iteration(self):
         self.addCleanup(os_helper.unlink, TESTFN)
         with open(TESTFN, "wb") as f:
@@ -1591,6 +1617,7 @@ class IterparseTest(unittest.TestCase):
         self.assertIn(repr(TESTFN), str(wm.warning))
         self.assertEqual(wm.filename, __file__)
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "iterparse.close() added in Python 3.13")
     def test_resource_warnings_exhausted(self):
         it = ET.iterparse(SIMPLE_XMLFILE)
         with warnings_helper.check_no_resource_warning(self):
@@ -1608,6 +1635,7 @@ class IterparseTest(unittest.TestCase):
         self.assertIn(repr(SIMPLE_XMLFILE), str(wm.warning))
         self.assertEqual(wm.filename, __file__)
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "iterparse.close() added in Python 3.13")
     def test_close_not_exhausted(self):
         iterparse = ET.iterparse
 
@@ -1643,6 +1671,7 @@ class IterparseTest(unittest.TestCase):
                 next(it)
             it.close()  # idempotent
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "iterparse.close() added in Python 3.13")
     def test_close_exhausted(self):
         iterparse = ET.iterparse
         it = iterparse(SIMPLE_XMLFILE)
@@ -2631,6 +2660,7 @@ class BugsTest(unittest.TestCase):
         self.assertRaises(TypeError, ET.TreeBuilder().start, "tag")
         self.assertRaises(TypeError, ET.TreeBuilder().start, "tag", None)
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "extend() exception propagation fixed in Python 3.13")
     def test_issue123213_correct_extend_exception(self):
         # Does not hide the internal exception when extending the element
         self.assertRaises(ZeroDivisionError, ET.Element('tag').extend,
@@ -2848,6 +2878,7 @@ class BasicElementTest(ElementTestCase, unittest.TestCase):
                 self.assertEqual(e2.tag, 'group')
                 self.assertEqual(e2[0].tag, 'dogs')
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "Error message format changed in Python 3.13")
     def test_remove_errors(self):
         e = ET.Element('tag')
         with self.assertRaisesRegex(ValueError,
@@ -3710,6 +3741,7 @@ class ElementIterTest(unittest.TestCase):
         doc = ET.XML("<root>a&amp;<sub>b&amp;</sub>c&amp;</root>")
         self.assertEqual(''.join(doc.itertext()), 'a&b&c&')
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "itertext() excludes comments/PIs starting in Python 3.13")
     def test_comment(self):
         e = ET.Element('root')
         e.text = 'before'
@@ -3723,6 +3755,7 @@ class ElementIterTest(unittest.TestCase):
         self.assertEqual(''.join(comment.itertext()), '')
         self.assertEqual(list(comment.iter()), [comment])
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "itertext() excludes comments/PIs starting in Python 3.13")
     def test_processinginstruction(self):
         e = ET.Element('root')
         e.text = 'before'
@@ -4291,6 +4324,7 @@ class ElementSlicingTest(unittest.TestCase):
         e[1::-sys.maxsize<<64] = [ET.Element('d')]
         self.assertEqual(self._subelem_tags(e), ['a0', 'd', 'a2', 'a3'])
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "setslice() exception propagation fixed in Python 3.13")
     def test_issue123213_setslice_exception(self):
         e = ET.Element('tag')
         # Does not hide the internal exception when assigning to the element
@@ -4612,25 +4646,29 @@ class KeywordArgsTest(unittest.TestCase):
             ET.Element('a', dict(href="#"), id="foo"),
             ET.Element('a', href="#", id="foo"),
             ET.Element('a', dict(href="#", id="foo"), href="#", id="foo"),
-            ET.Element('a', frozendict(href="#", id="foo")),
-            ET.Element('a', frozendict(href="#"), id="foo"),
-            ET.Element('a', attrib=frozendict(href="#", id="foo")),
         ]
+        if sys.version_info >= (3, 13):
+            elements += [
+                ET.Element('a', frozendict(href="#", id="foo")),
+                ET.Element('a', frozendict(href="#"), id="foo"),
+                ET.Element('a', attrib=frozendict(href="#", id="foo")),
+            ]
         for e in elements:
             self.assertEqual(e.tag, 'a')
             self.assertEqual(e.attrib, dict(href="#", id="foo"))
 
         e2 = ET.SubElement(elements[0], 'foobar', attrib={'key1': 'value1'})
         self.assertEqual(e2.attrib['key1'], 'value1')
-        e3 = ET.SubElement(elements[0], 'foobar',
-                           attrib=frozendict({'key1': 'value1'}))
-        self.assertEqual(e3.attrib['key1'], 'value1')
+        if sys.version_info >= (3, 13):
+            e3 = ET.SubElement(elements[0], 'foobar',
+                               attrib=frozendict({'key1': 'value1'}))
+            self.assertEqual(e3.attrib['key1'], 'value1')
 
-        errmsg = 'must be dict or frozendict, not str'
-        with self.assertRaisesRegex(TypeError, errmsg):
-            ET.Element('a', "I'm not a dict")
-        with self.assertRaisesRegex(TypeError, errmsg):
-            ET.Element('a', attrib="I'm not a dict")
+            errmsg = 'must be dict or frozendict, not str'
+            with self.assertRaisesRegex(TypeError, errmsg):
+                ET.Element('a', "I'm not a dict")
+            with self.assertRaisesRegex(TypeError, errmsg):
+                ET.Element('a', attrib="I'm not a dict")
 
 # --------------------------------------------------------------------
 
@@ -4651,6 +4689,7 @@ class NoAcceleratorTest(unittest.TestCase):
 # --------------------------------------------------------------------
 
 class BoolTest(unittest.TestCase):
+    @unittest.skipUnless(sys.version_info >= (3, 13), "Warning message format changed in Python 3.13")
     def test_warning(self):
         e = ET.fromstring('<a style="new"></a>')
         msg = (
@@ -4800,6 +4839,7 @@ class C14NTest(unittest.TestCase):
     # note that this uses generated C14N versions of the standard ET.write
     # output, not roundtripped C14N (see above).
 
+    @unittest.skipUnless(sys.version_info >= (3, 13), "C14N v2 test data only available in Python 3.13+")
     def test_xml_c14n2(self):
         datadir = findfile("c14n-20", subdir="xmltestdata")
         full_path = partial(os.path.join, datadir)
@@ -4904,6 +4944,7 @@ class C14NTest(unittest.TestCase):
 
 
 class TestModule(unittest.TestCase):
+    @unittest.skipUnless(sys.version_info >= (3, 13), "VERSION deprecation added in Python 3.13")
     def test_deprecated_version(self):
         with self.assertWarnsRegex(
             DeprecationWarning,
