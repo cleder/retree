@@ -5,7 +5,8 @@ except ModuleNotFoundError:
     from xml.etree.ElementTree import fromstring, tostring
 
     class PyDocument:  # pragma: no cover - compatibility fallback
-        pass
+        def __init__(self, *args, **kwargs) -> None:
+            raise ModuleNotFoundError("retree Rust extension is not built")
 
 __all__ = [
     "PyDocument",

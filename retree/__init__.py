@@ -1,5 +1,5 @@
 from . import etree
-from .etree import *
+from .etree import PyDocument, PyElement, fromstring, tostring
 
 __all__ = [
     "etree",
