@@ -15,5 +15,13 @@ class RustEtreeStdlibHarnessTests(unittest.TestCase):
         self.assertIs(sys.modules["_elementtree"], rust_mod)
 
 
+class RetreeImportShapeTests(unittest.TestCase):
+    def test_import_shape_matches_goal(self) -> None:
+        from retree import etree as ET
+
+        self.assertTrue(hasattr(ET, "fromstring"))
+        self.assertTrue(hasattr(ET, "tostring"))
+
+
 if __name__ == "__main__":
     unittest.main()

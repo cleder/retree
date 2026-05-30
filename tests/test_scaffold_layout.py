@@ -11,8 +11,8 @@ class ScaffoldLayoutTests(unittest.TestCase):
             ROOT / "Cargo.toml",
             ROOT / "pyproject.toml",
             ROOT / "src" / "lib.rs",
-            ROOT / "rust_etree" / "__init__.py",
-            ROOT / "rust_etree" / "etree.py",
+            ROOT / "retree" / "__init__.py",
+            ROOT / "retree" / "etree.py",
             ROOT / "tests" / "test_rust_etree_compat.py",
         ]
         for path in expected:
@@ -23,6 +23,11 @@ class ScaffoldLayoutTests(unittest.TestCase):
         cargo_toml = (ROOT / "Cargo.toml").read_text(encoding="utf-8")
         self.assertIn('crate-type = ["cdylib"]', cargo_toml)
         self.assertIn('pyo3 = { version = "0.28.3", features = ["extension-module"] }', cargo_toml)
+
+    def test_pyproject_targets_retree_package(self) -> None:
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn('name = "retree"', pyproject)
+        self.assertIn('module-name = "retree._rust_etree"', pyproject)
 
 
 if __name__ == "__main__":
